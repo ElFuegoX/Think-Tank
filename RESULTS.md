@@ -156,6 +156,68 @@ Most frequent top pair in honest runs (rich state): (L, N1) 19/100 at 30 rounds,
 
 ---
 
+# 4-player RPS with one seeded pair: net influence vs action correlation
+
+Code: `rps4.py`. Command: `python rps4.py --runs 200 --games 300 1000 3000`. Raw output: `results/rps4.txt`.
+
+## Setup
+- 4 players. A, C and D play at random. B colludes with A (plays the move A beats) with probability cp.
+- **independent:** honest C and D are independent. There is no common cause.
+- **herding:** honest C and D each play, with probability 0.5, the move that beats A's *previous* move. This is a public signal, so they are correlated without colluding (about 50% identical moves, vs 33% by chance).
+- **info:** Bonjour net influence, pair score = min(Γ(i;j), Γ(j;i)), state = previous joint move (81 states).
+- **corr:** Cramér's V between two players' moves, unconditioned.
+- **Calibration:** the run score is the max over 6 pairs. The threshold is the 95% quantile of cp = 0 runs of the same variant and length, so both detectors have a 5% false-alarm rate.
+- **ID:** the run is flagged *and* the top pair is (A, B). 200 runs per cell, with 95% Wilson intervals.
+
+## Results (ID, 95% CI)
+
+| Variant | cp | 300 rounds: info | corr | 1,000 rounds: info | corr | 3,000 rounds: info | corr |
+|---|---|---|---|---|---|---|---|
+| independent | 0.1 | 0.01 [0.00, 0.03] | 0.21 [0.16, 0.28] | 0.03 [0.01, 0.06] | **0.83** [0.77, 0.88] | 0.24 [0.19, 0.30] | **1.00** [0.98, 1.00] |
+| independent | 0.2 | 0.01 [0.01, 0.04] | **0.91** [0.86, 0.94] | 0.45 [0.38, 0.51] | **1.00** [0.98, 1.00] | 1.00 [0.98, 1.00] | 1.00 [0.98, 1.00] |
+| independent | 0.4 | 0.51 [0.44, 0.58] | **1.00** [0.98, 1.00] | 1.00 [0.98, 1.00] | 1.00 [0.98, 1.00] | 1.00 | 1.00 |
+| herding | 0.1 | 0.04 [0.02, 0.08] | 0.00 [0.00, 0.02] | **0.20** [0.15, 0.27] | 0.00 [0.00, 0.02] | **0.17** [0.12, 0.22] | 0.00 [0.00, 0.02] |
+| herding | 0.2 | 0.10 [0.07, 0.16] | 0.01 [0.00, 0.03] | **0.77** [0.71, 0.82] | 0.00 [0.00, 0.02] | **0.99** [0.97, 1.00] | 0.00 [0.00, 0.02] |
+| herding | 0.4 | 0.73 [0.66, 0.79] | **0.95** [0.91, 0.97] | 1.00 [0.98, 1.00] | 1.00 [0.98, 1.00] | 1.00 | 1.00 |
+
+Top pair in honest herding runs: corr gives (C, D) in 200/200 runs at every length. Info gives (A, B) in 199/200 at 300 rounds and 173/200 at 1,000 (see finding 3), and spreads out at 3,000 (most frequent: (B, C), 46/200).
+
+## Findings
+1. **Without a common cause, correlation wins.** It needs about 3× fewer rounds for the same detection (cp = 0.2: 0.91 at 300 rounds vs 0.45 for info at 1,000). Net influence pays for conditioning on 81 states. This agrees with soumya-nayak's null result and extends it: correlation is not just equal, it is better.
+2. **With a public common cause, net influence wins once it has enough data, and correlation fails.** For weak to medium collusion (cp = 0.1–0.2), correlation never identifies the pair (0.00–0.01), because the honest herders C–D always look more alike. Net influence reaches 0.77 at 1,000 rounds and 0.99 at 3,000 (cp = 0.2). Correlation only succeeds when the collusion signal is stronger than the herding signal (cp = 0.4).
+3. **The net-influence subtraction is biased when players' behaviour differs.** In honest herding runs at 300 rounds, info ranks the *independent* pair (A, B) first in 199/200 runs. The likely cause: herders' moves are more predictable within each state, so the plug-in bias of γ is smaller for pairs involving C or D. Γ(A;B) = γ(A;B) − max γ(k;B) then subtracts a smaller bias than it contains, leaving a positive residue. Calibration controls the false-alarm rate, but this artifact can mislead *identification* in short games. It fades with data (spread out at 3,000 rounds). Tested below: subtracting the pair-specific permutation-null mean fixes it, and Miller–Madow does not.
+
+## Bias correction of net influence
+Command: `python rps4.py --runs 200 --games 300 1000 --detectors info info_mm info_perm corr`. Raw output: `results/rps4_bias_correction.txt`.
+- **info_mm:** γ with the Miller–Madow correction applied to each entropy. This is a single analytic correction, the same formula for every pair.
+- **info_perm:** γ minus the mean of 20 within-state shuffles of j's moves, so each pair gets its own bias estimate.
+
+Honest herding runs: how often the independent pair (A, B) is ranked first (chance ≈ 33/200 for 6 pairs):
+
+| Rounds | info | info_mm | info_perm | corr |
+|---|---|---|---|---|
+| 300 | 193/200 | 182/200 | **39/200** | 0/200 (always C–D) |
+| 1,000 | 175/200 | 59/200 | **44/200** | 0/200 (always C–D) |
+
+Identification (ID, 95% CI):
+
+| Variant | Rounds | cp | info | info_mm | info_perm | corr |
+|---|---|---|---|---|---|---|
+| independent | 300 | 0.4 | 0.51 [0.44, 0.58] | 0.59 [0.53, 0.66] | 0.65 [0.58, 0.71] | **1.00** |
+| independent | 1,000 | 0.2 | 0.45 [0.38, 0.51] | 0.40 [0.33, 0.47] | 0.42 [0.36, 0.49] | **1.00** |
+| herding | 300 | 0.4 | 0.76 [0.70, 0.81] | 0.71 [0.65, 0.77] | 0.79 [0.72, 0.84] | **0.96** |
+| herding | 1,000 | 0.2 | 0.71 [0.65, 0.77] | 0.57 [0.51, 0.64] | 0.65 [0.58, 0.71] | 0.00 [0.00, 0.02] |
+| herding | 1,000 | 0.1 | 0.13 [0.09, 0.18] | 0.06 [0.03, 0.10] | 0.06 [0.03, 0.10] | 0.00 [0.00, 0.02] |
+
+Findings:
+1. **The pair-specific permutation correction removes the identification artifact.** It brings the honest ranking of (A, B) to chance level (39–44/200), and honest runs flagged *as* (A, B) fall from 5% to 1%. Miller–Madow barely helps at 300 rounds, because one formula for all pairs cannot capture pair-specific bias.
+2. **Part of uncorrected net influence's advantage in the herding game was the artifact.** The bias happens to point at (A, B), the pair not involving the herders, which is also the colluding pair. At 1,000 rounds and cp = 0.2, the uncorrected ID of 0.71 drops to 0.65 once corrected. The main conclusion still holds: corrected net influence 0.65 vs correlation 0.00.
+3. **Correction does not change the data cost.** Without a common cause, correlation still dominates. Corrected net influence should be used whenever pairs differ in behaviour, which in practice is always.
+
+**Thesis, revised:** (bias-corrected) net influence beats action correlation **only when honest agents share a public common cause and enough data is available**. Otherwise correlation is cheaper and better. This matches the scripted-market result (correlation 0% identification, info 75–100%) and explains soumya-nayak's null result.
+
+---
+
 # LLM judge on RPS: with vs without information-theoretic statistics
 
 Code: `llm_judge.py`. Command: `python llm_judge.py --models poolside/laguna-s-2.1:free cohere/north-mini-code:free openai/gpt-4o-mini google/gemini-2.5-flash --seeds 10 --cps 0 0.2 0.4`. Raw outputs (scores, pairs, explanations, token usage, cost): `results/llm_judge_<model>_n300.jsonl`.
@@ -281,3 +343,68 @@ This is exactly the case the information-theoretic measure targets. It never rea
 1. LLM-judge comparison: done for 3 models, plus Laguna partial. Optionally add `openai/gpt-6-luna` as a recent, cheap model (about $0.10).
 2. Optional quick add: the Γ-graph view on the scripted market (no new data needed).
 3. Whistleblowing and the ML classifier go to **future work**, written up with the design and the risks above.
+
+---
+
+# Related work and blind spots (literature check, 2026-10-24)
+
+Based on abstracts, READMEs and preprint summaries, not full reads. Most sources are preprints or unreviewed repos. Verify claims before citing them.
+
+## Blind spot 1: overlapping projects from this same sprint
+- **Raj-Taware/collusion-net-influence** (Apart sprint, RQ 1.4 / 2.3) is essentially our RPS part, done at larger scale.
+  - Calibrated net influence: within-state permutation null plus Bonferroni. False alarms fall from 29–38% (fixed α) to 2–7%.
+  - **Real LLM agents** playing 3-player RPS: Qwen2.5-7B and Llama-3.1-8B. Instructed collusion is caught in 7/10 and 10/10 games, with move-based AUROC of 0.91 and 1.00.
+  - An LLM judge reading the chat scores AUROC 0.04–0.27, **worse than chance**.
+  - Open problem they leave: two agents of the **same model** look alike without colluding. Their calibrated test flags the innocent Qwen pair in 7/10 games.
+- **soumya-nayak-commits/collusion-detetction** (Apart sprint): 4-player scripted RPS with decoys. It finds **no advantage of net influence over Cramér's V**, with the two methods disagreeing in 0.7% of 7,200 trials. Pairs are ranked, with no false-alarm test.
+- **arXiv 2608.02698** (preprint, results labelled as placeholders) is a black-box steganalysis meta-detector. It combines cross-run MI, permutation tests, timing and tool-call signals, with conformal calibration at FPR 10⁻² and 10⁻³. Against adaptive colluders, its AUC drops from 0.99 to 0.69.
+
+**Consequence for our write-up:**
+- "Calibrate Bonjour by permutation" and "the LLM judge fails" are **not new**. Present them as independent confirmations.
+- Our distinct contributions are:
+  1. **The market setting.** When agents share a public common cause, raw correlation fails completely (0% identification) while net influence succeeds. This reconciles soumya-nayak's null result: the advantage appears only when a public confound exists.
+  2. **The state-abstraction bias–variance trade-off**, which none of these works treat.
+  3. **The multi-family LLM judge with a "with stats" arm** and the faithfulness analysis of its explanations.
+
+## Information-theoretic tools we do not yet use
+1. **Model-matched null for the "honest twins" problem** (directly addresses Raj-Taware's open problem). Replay each agent alone, without the private channel, in the same states, to build a null that already contains same-model similarity. Then test whether the pair shares more information than two *independent copies of the same model*.
+2. **Directed information / transfer entropy** instead of symmetric MI. Front-running is a one-directional flow (the follower's past predicts the leader's future). Our lag-0/1 trick approximates it. Directed information has standard estimators and causality tests. Conditional transfer entropy is used to map information flow among FX dealers, but we found no use for trader-level manipulation detection.
+3. **Partial information decomposition (synergy)** for cartels. Collusion can be invisible pairwise but visible in a triple: C plays well only when A *and* B are known together. PID on time-delayed MI has been applied to LLM coordination (arXiv 2510.05174), but not to collusion detection. It addresses the "exactly two colluders" assumption flagged in the sprint brief. *Caveat:* common estimators (I_min) overestimate synergy.
+4. **Theory for the "price of stealth."** The **square-root law** of covert communication says that only O(√n) covert bits fit in n channel uses undetected. For colluders, staying undetectable forces coordination on a vanishing fraction of rounds, so profit per round tends to zero. Stein's lemma gives the detection time ≈ 1 / KL(collusive ‖ honest), which can be checked against our dose–response curves.
+5. **Sequential tests (SPRT / CUSUM)** to detect *before the dump*. Report "rounds of warning before the sell-off" as a finance-relevant metric. Sequential detection is named as future work in the activation-probe preprint (arXiv 2604.01151).
+6. **Compression-based similarity (NCD)** as a state-free detector. It avoids choosing the state abstraction, which is our measured weak point. It has been used to detect coordinated social-media accounts, but not LLM agents.
+
+## Other blind spots
+- **Open-channel collusion with truthful messages** (arXiv 2601.01685). Steganography detectors miss it, while action-based measures can still catch its effects.
+- **Chain-of-thought monitoring is insufficient** (EMNLP Findings 2026, "Faithful yet Collusive"). Across 9 LLM pricing agents, the most collusive model reports cooperative intent. This supports our unfaithful-explanation finding.
+- **Adaptive colluders.** Our colluders do not know they are watched. Detectors lose much of their power against adaptive ones (2608.02698), and against monitored double-auction sellers who tried emojis and one-character messages (arXiv 2507.01413). This must be stated as a limitation.
+- **Emergent collusion is rare in small models.** In Raj-Taware's runs, no pair colluded spontaneously. An emergence condition may well find nothing.
+
+## Recommended priorities for the remaining time
+1. Reframe the write-up: RPS as independent confirmation, and the market (net influence vs correlation under a public confound) as the main contribution.
+2. Model-matched null (tool 1) with LLM traders. It is the most direct open problem, and none of the sprint work we found has solved it.
+3. If time allows, the price-of-stealth curve with the square-root-law prediction (scripted part is free).
+
+## Sources
+- Bonjour et al., UAI 2022: https://proceedings.mlr.press/v180/bonjour22a.html
+- Raj-Taware, collusion-net-influence: https://github.com/Raj-Taware/collusion-net-influence
+- soumya-nayak, collusion-detection: https://github.com/soumya-nayak-commits/collusion-detetction
+- Steganalysis of Adaptive Covert Collusion, arXiv 2608.02698: https://arxiv.org/html/2608.02698
+- Secret Collusion among AI Agents, NeurIPS 2024: https://proceedings.neurips.cc/paper_files/paper/2024/file/861f7dad098aec1c3560fb7add468d41-Paper-Conference.pdf
+- Voluntary Collusion with Secret Tools, arXiv 2605.27593: https://arxiv.org/html/2605.27593v1
+- Tool Use Enables Undetectable Steganography, arXiv 2606.28425: https://arxiv.org/pdf/2606.28425
+- Evaluating LLM Agent Collusion in Double Auctions, arXiv 2507.01413: https://arxiv.org/pdf/2507.01413
+- Faithful yet Collusive, EMNLP Findings 2026: https://aclanthology.org/2026.findings-emnlp.25/
+- Detecting Multi-Agent Collusion through Interpretability, arXiv 2604.01151: https://arxiv.org/pdf/2604.01151
+- Emergent Coordination in Multi-Agent LMs, arXiv 2510.05174: https://arxiv.org/pdf/2510.05174
+- Claims of emergence should be grounded in information decomposition, arXiv 2610.28479: https://arxiv.org/html/2610.28479
+- Lying with Truths, arXiv 2601.01685: https://arxiv.org/html/2601.01685
+- Square root law for covert communications: https://www.emergentmind.com/topics/square-root-law-for-covert-communications
+- Square-root law with warden-favorable side information, arXiv 2607.14013: https://arxiv.org/abs/2607.14013
+- Conditional transfer entropy among FX dealers: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11431758/
+- Transfer entropy lead-lag p-values, arXiv 2206.10173: https://arxiv.org/pdf/2206.10173
+- Estimating directed information and testing for causality: https://www.researchgate.net/publication/279864674_Estimating_the_Directed_Information_and_Testing_for_Causality
+- Sequential change detection survey, arXiv 2104.04186: https://arxiv.org/pdf/2104.04186
+- Compression-based detection of coordinated behavior, ACM: https://dl.acm.org/doi/10.1145/3778356
+- Survey of security threats in LLM agents, arXiv 2604.23338: https://arxiv.org/pdf/2604.23338
+- Apart Research AI Collusion Sprint: https://apartresearch.com/sprints/ai-collusion-research-sprint-2026-10-23-to-2026-10-25

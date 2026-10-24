@@ -1,0 +1,46 @@
+﻿cp = 0 row: TPR is the false-alarm rate (target 0.05). ID = flagged AND top pair is (A, B).
+Brackets: 95% Wilson confidence interval.
+
+--- variant=independent, 300 rounds, 200 runs per cell ---
+cp                    info TPR                 info ID             info_mm TPR              info_mm ID           info_perm TPR            info_perm ID                corr TPR                 corr ID
+0.00          0.05 [0.03,0.09]        0.01 [0.00,0.03]        0.05 [0.03,0.09]        0.01 [0.00,0.04]        0.05 [0.03,0.09]        0.01 [0.00,0.04]        0.05 [0.03,0.09]        0.01 [0.00,0.03]
+0.10          0.07 [0.04,0.11]        0.01 [0.00,0.03]        0.10 [0.06,0.14]        0.01 [0.00,0.04]        0.07 [0.04,0.11]        0.01 [0.00,0.03]        0.24 [0.19,0.30]        0.21 [0.16,0.28]
+0.20          0.04 [0.02,0.07]        0.01 [0.01,0.04]        0.07 [0.04,0.11]        0.03 [0.01,0.06]        0.07 [0.04,0.11]        0.05 [0.03,0.09]        0.91 [0.86,0.94]        0.91 [0.86,0.94]
+0.40          0.52 [0.45,0.59]        0.51 [0.44,0.58]        0.61 [0.55,0.68]        0.59 [0.53,0.66]        0.65 [0.58,0.71]        0.65 [0.58,0.71]        1.00 [0.98,1.00]        1.00 [0.98,1.00]
+  info: most frequent top pair in honest runs = ('C', 'D') (39/200), (A, B) top in 33/200
+  info_mm: most frequent top pair in honest runs = ('A', 'D') (40/200), (A, B) top in 32/200
+  info_perm: most frequent top pair in honest runs = ('C', 'D') (41/200), (A, B) top in 36/200
+  corr: most frequent top pair in honest runs = ('C', 'D') (44/200), (A, B) top in 32/200
+
+--- variant=independent, 1000 rounds, 200 runs per cell ---
+cp                    info TPR                 info ID             info_mm TPR              info_mm ID           info_perm TPR            info_perm ID                corr TPR                 corr ID
+0.00          0.05 [0.03,0.09]        0.01 [0.00,0.04]        0.05 [0.03,0.09]        0.01 [0.00,0.04]        0.05 [0.03,0.09]        0.01 [0.00,0.03]        0.05 [0.03,0.09]        0.00 [0.00,0.02]
+0.10          0.07 [0.04,0.11]        0.03 [0.01,0.06]        0.08 [0.05,0.13]        0.03 [0.01,0.06]        0.09 [0.06,0.14]        0.04 [0.02,0.08]        0.84 [0.78,0.88]        0.83 [0.77,0.88]
+0.20          0.46 [0.39,0.52]        0.45 [0.38,0.51]        0.41 [0.34,0.47]        0.40 [0.33,0.47]        0.43 [0.36,0.50]        0.42 [0.36,0.49]        1.00 [0.98,1.00]        1.00 [0.98,1.00]
+0.40          1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]
+  info: most frequent top pair in honest runs = ('A', 'C') (42/200), (A, B) top in 34/200
+  info_mm: most frequent top pair in honest runs = ('A', 'C') (42/200), (A, B) top in 31/200
+  info_perm: most frequent top pair in honest runs = ('A', 'C') (39/200), (A, B) top in 35/200
+  corr: most frequent top pair in honest runs = ('B', 'D') (43/200), (A, B) top in 26/200
+
+--- variant=herding, 300 rounds, 200 runs per cell ---
+cp                    info TPR                 info ID             info_mm TPR              info_mm ID           info_perm TPR            info_perm ID                corr TPR                 corr ID
+0.00          0.05 [0.03,0.09]        0.05 [0.03,0.09]        0.05 [0.03,0.09]        0.05 [0.03,0.09]        0.05 [0.03,0.09]        0.01 [0.01,0.04]        0.05 [0.03,0.09]        0.00 [0.00,0.02]
+0.10          0.06 [0.03,0.10]        0.06 [0.03,0.10]        0.07 [0.04,0.11]        0.07 [0.04,0.11]        0.06 [0.03,0.10]        0.01 [0.01,0.04]        0.10 [0.07,0.15]        0.00 [0.00,0.02]
+0.20          0.18 [0.13,0.24]        0.18 [0.13,0.24]        0.18 [0.13,0.24]        0.18 [0.13,0.24]        0.14 [0.10,0.19]        0.12 [0.08,0.17]        0.07 [0.04,0.11]        0.01 [0.00,0.03]
+0.40          0.76 [0.70,0.81]        0.76 [0.70,0.81]        0.71 [0.65,0.77]        0.71 [0.65,0.77]        0.79 [0.72,0.84]        0.79 [0.72,0.84]        0.98 [0.95,0.99]        0.96 [0.93,0.98]
+  info: most frequent top pair in honest runs = ('A', 'B') (193/200), (A, B) top in 193/200
+  info_mm: most frequent top pair in honest runs = ('A', 'B') (182/200), (A, B) top in 182/200
+  info_perm: most frequent top pair in honest runs = ('A', 'C') (40/200), (A, B) top in 39/200
+  corr: most frequent top pair in honest runs = ('C', 'D') (200/200), (A, B) top in 0/200
+
+--- variant=herding, 1000 rounds, 200 runs per cell ---
+cp                    info TPR                 info ID             info_mm TPR              info_mm ID           info_perm TPR            info_perm ID                corr TPR                 corr ID
+0.00          0.05 [0.03,0.09]        0.05 [0.03,0.09]        0.05 [0.03,0.09]        0.02 [0.01,0.05]        0.05 [0.03,0.09]        0.01 [0.01,0.04]        0.05 [0.03,0.09]        0.00 [0.00,0.02]
+0.10          0.13 [0.09,0.18]        0.13 [0.09,0.18]        0.07 [0.04,0.11]        0.06 [0.03,0.10]        0.10 [0.07,0.16]        0.06 [0.03,0.10]        0.07 [0.05,0.12]        0.00 [0.00,0.02]
+0.20          0.71 [0.65,0.77]        0.71 [0.65,0.77]        0.57 [0.51,0.64]        0.57 [0.51,0.64]        0.66 [0.59,0.72]        0.65 [0.58,0.71]        0.04 [0.02,0.08]        0.00 [0.00,0.02]
+0.40          1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]        1.00 [0.98,1.00]
+  info: most frequent top pair in honest runs = ('A', 'B') (175/200), (A, B) top in 175/200
+  info_mm: most frequent top pair in honest runs = ('A', 'B') (59/200), (A, B) top in 59/200
+  info_perm: most frequent top pair in honest runs = ('A', 'B') (44/200), (A, B) top in 44/200
+  corr: most frequent top pair in honest runs = ('C', 'D') (200/200), (A, B) top in 0/200
