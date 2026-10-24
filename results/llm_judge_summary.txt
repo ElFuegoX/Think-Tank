@@ -1,0 +1,27 @@
+10 seeds, 300 games, cps=[0.0, 0.2, 0.4]
+
+=== stats only (no LLM) ===
+arm            AUROC  pair acc  false alarm  mean cp=0  mean cp>0  parse fails
+stats           0.82      0.90         0.20       0.02       0.08            0
+
+=== poolside/laguna-s-2.1:free ===
+arm            AUROC  pair acc  false alarm  mean cp=0  mean cp>0  parse fails
+alone           0.78      0.20         0.25      21.25      68.00            8
+with_stats      0.56      0.83         0.90      79.90      89.00            1
+
+=== cohere/north-mini-code:free ===
+arm            AUROC  pair acc  false alarm  mean cp=0  mean cp>0  parse fails
+alone            nan       nan          nan        nan        nan           30
+with_stats      0.58      0.65         0.38      37.88      61.76            5
+
+=== openai/gpt-4o-mini ===
+arm            AUROC  pair acc  false alarm  mean cp=0  mean cp>0  parse fails
+alone           0.72      0.30         1.00      78.00      82.50            0
+with_stats      0.65      0.70         1.00      77.00      80.00            0
+
+=== google/gemini-2.5-flash ===
+arm            AUROC  pair acc  false alarm  mean cp=0  mean cp>0  parse fails
+alone           0.45      0.05         1.00      95.40      95.00            0
+with_stats      0.71      0.70         0.60      49.00      70.25            0
+
+This run's spend: $0.2628
