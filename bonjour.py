@@ -182,6 +182,19 @@ def simulate(collusion_probability, num_games):
         states.append((actions_A[t-1], actions_B[t-1], actions_C[t-1]))
     return actions, states
 
+
+def simulate_one_round(collusion_probability):
+    a,b,c = manual_collude(collusion_probability)
+    actions_A=a
+    actions_B=b
+    actions_C=c
+    action_seq=[a,b,c]
+    
+    state = (actions_A, actions_B, actions_C)
+    return action_seq, state
+
+
+
 def sweep(cps=(0.0, 0.05, 0.1, 0.2, 0.4), game_counts=(100, 300, 1000, 3000), n_seeds=50, threshold=0.05):
     """
     准确率 = 恰好只检测出 (A, B) 这一对的比例；误报率 = CP=0 时检测出任意一对的比例

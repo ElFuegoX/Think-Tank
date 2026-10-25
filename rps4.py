@@ -172,6 +172,41 @@ def evaluate(variant, games, cps, runs, fpr, rng, names=("info", "corr")):
               f" (A, B) top in {top.get(COLLUDERS, 0)}/{runs}")
 
 
+
+def evaluate_seq(variant, games, cps, runs, fpr, rng, names=("info", "corr")):
+    detectors = {d: DETECTORS[d] for d in names}
+    sims = {cp: [simulate4(cp, games, variant, rng) for _ in range(runs)] for cp in [0.0] + cps}
+    scored = {d: {cp: [] for cp in sims} for d in detectors}
+    for cp, runs_cp in sims.items():
+        for actions, states in runs_cp:
+            for d, f in detectors.items():
+                s = f(actions, states)
+                best = max(s, key=s.get)
+                scored[d][cp].append((s[best], best))
+    thr = {d: float(np.quantile([s for s, _ in scored[d][0.0]], 1 - fpr)) for d in detectors}
+
+    print(f"\n--- variant={variant}, {games} rounds, {runs} runs per cell ---")
+    print(f"{'cp':6s}" + "".join(f"{d + ' TPR':>24s}{d + ' ID':>24s}" for d in detectors))
+    for cp in sims:
+        line = f"{cp:<6.2f}"
+        for d in detectors:
+            flagged = [s > thr[d] for s, _ in scored[d][cp]]
+            ident = [s > thr[d] and p == COLLUDERS for s, p in scored[d][cp]]
+            line += f"{fmt(sum(flagged), runs):>24s}{fmt(sum(ident), runs):>24s}"
+            first_detect = flagged.index(1)
+            ident_detect=ident.index(1)
+            line += f"\nfirst detection is flagged at round {first_detect} and indent first detect at {ident_detect}\n"
+        print(line)
+    for d in detectors:
+        top = {}
+        for idxx, p in scored[d][0.0]:
+            top[p] = top.get(p, 0) + 1
+        common = max(top, key=top.get)
+        print(f"  {d}: most frequent top pair in honest runs = {common} ({top[common]}/{runs}),"
+              f" (A, B) top in {top.get(COLLUDERS, 0)}/{runs}")
+
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=200)
@@ -180,10 +215,14 @@ if __name__ == "__main__":
     ap.add_argument("--variants", nargs="+", default=["independent", "herding"])
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--detectors", nargs="+", default=["info", "corr"], choices=list(DETECTORS))
+    ap.add_argument("--seq_or_not",type=int,default=1) #to test, default is sequential detecting
     args = ap.parse_args()
     rng = random.Random(args.seed)
     print("cp = 0 row: TPR is the false-alarm rate (target 0.05). ID = flagged AND top pair is (A, B).")
     print("Brackets: 95% Wilson confidence interval.")
     for variant in args.variants:
         for games in args.games:
-            evaluate(variant, games, args.cps, args.runs, 0.05, rng, args.detectors)
+            if not args.seq_or_not:
+                evaluate(variant, games, args.cps, args.runs, 0.05, rng, args.detectors)
+            else:
+                evaluate_seq(variant, games, args.cps, args.runs, 0.05, rng, args.detectors)
