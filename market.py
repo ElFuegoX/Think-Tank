@@ -20,6 +20,7 @@ Usage: python market.py [--runs 200] [--episodes 1 5 20] [--cps 0 0.25 0.5 0.75 
 """
 import argparse
 import random
+import zlib
 from itertools import combinations
 
 import numpy as np
@@ -165,14 +166,67 @@ def corr_pair_scores(eps):
     return scores
 
 
+_te_rng = random.Random(4321)
+
+
+def transfer_entropy(eps, i, j, k=10):
+    """TE(i -> j) = I(a_i,t-1 ; a_j,t | a_j,t-1, s_t), minus its mean under within-state shuffles."""
+    x, y, s = [], [], []
+    for actions, states, _ in eps:
+        for t in range(1, len(states)):
+            x.append(actions[i][t - 1])
+            y.append(actions[j][t])
+            s.append((states[t], actions[j][t - 1]))
+    observed = calculate_individual_influence(x, y, s)
+    idx_by_state = {}
+    for t, st in enumerate(s):
+        idx_by_state.setdefault(st, []).append(t)
+    null = []
+    for _ in range(k):
+        shuffled = list(x)
+        for idx in idx_by_state.values():
+            vals = [x[t] for t in idx]
+            _te_rng.shuffle(vals)
+            for t, v in zip(idx, vals):
+                shuffled[t] = v
+        null.append(calculate_individual_influence(shuffled, y, s))
+    return observed - float(np.mean(null))
+
+
+def te_pair_scores(eps):
+    """Directed information: the stronger of the two bias-corrected transfer entropies."""
+    return {(i, j): max(transfer_entropy(eps, i, j), transfer_entropy(eps, j, i))
+            for i, j in combinations(sorted(TRADERS), 2)}
+
+
+def _compressed(symbols):
+    return len(zlib.compress(bytes(symbols), 9))
+
+
+def ncd_pair_scores(eps):
+    """Compression-based dependence: C(x) + C(y) - C(joint), per round, with no state abstraction.
+    The joint sequence encodes both traders' actions in one symbol per round."""
+    scores = {}
+    for i, j in combinations(sorted(TRADERS), 2):
+        xi = [a + 1 for actions, _, _ in eps for a in actions[i]]
+        xj = [a + 1 for actions, _, _ in eps for a in actions[j]]
+        joint = [3 * a + b for a, b in zip(xi, xj)]
+        scores[(i, j)] = (_compressed(xi) + _compressed(xj) - _compressed(joint)) / len(xi)
+    return scores
+
+
+DETECTORS = {"info": None, "corr": None, "te": te_pair_scores, "ncd": ncd_pair_scores}
+
+
 def run_score(pair_scores):
     best = max(pair_scores, key=pair_scores.get)
     return pair_scores[best], best
 
 
-def evaluate(cps, episode_counts, runs, fpr=0.05, seed=0):
+def evaluate(cps, episode_counts, runs, fpr=0.05, seed=0, names=("info", "corr")):
     rng = random.Random(seed)
-    detectors = {"info": info_pair_scores, "corr": corr_pair_scores}
+    DETECTORS.update(info=info_pair_scores, corr=corr_pair_scores)
+    detectors = {d: DETECTORS[d] for d in names}
     print(f"{runs} runs per cell, threshold = {1 - fpr:.0%} quantile of cp=0 run scores (target FPR {fpr:.0%})")
     print("TPR = run flagged; ID = flagged AND top pair is (L, F)\n")
     for n_ep in episode_counts:
@@ -217,8 +271,9 @@ if __name__ == "__main__":
     ap.add_argument("--cps", type=float, nargs="+", default=[0.0, 0.25, 0.5, 0.75, 1.0])
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--state", choices=["basic", "rich"], default="basic")
+    ap.add_argument("--detectors", nargs="+", default=["info", "corr"], choices=list(DETECTORS))
     args = ap.parse_args()
     STATE = args.state
     if 0.0 not in args.cps:
         args.cps = [0.0] + args.cps
-    evaluate(args.cps, args.episodes, args.runs, seed=args.seed)
+    evaluate(args.cps, args.episodes, args.runs, seed=args.seed, names=args.detectors)

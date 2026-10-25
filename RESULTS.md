@@ -154,6 +154,28 @@ Most frequent top pair in honest runs (rich state): (L, N1) 19/100 at 30 rounds,
 - **Stronger baseline:** correlation that is partialled on the public price change, to make the comparison less of a straw man.
 - **Market tuning** (econ): make the scheme profitable, for example with more momentum traders or less aggressive value traders.
 
+## Directed information and compression detectors (tools 2 and 6)
+
+Command: `python market.py --runs 100 --episodes 1 5 20 --detectors info corr te ncd`. Raw output: `results/market_te_ncd.txt`. Same market, seed and calibration as above (5% FPR on honest runs).
+
+- **te (directed information):** pair score = max of TE(i→j) and TE(j→i), where TE(i→j) = I(a_i,t−1 ; a_j,t | a_j,t−1, s_t). Each TE is bias-corrected by subtracting its mean under 10 within-state shuffles.
+- **ncd (compression):** pair score = [C(x) + C(y) − C(joint)] / n with zlib, where the joint sequence has one symbol per round for both actions. No state abstraction.
+
+ID (flagged AND top pair is L–F), 100 runs per cell:
+
+| cp | 30 rounds: info / corr / te / ncd | 150 rounds: info / corr / te / ncd | 600 rounds: info / corr / te / ncd |
+|---|---|---|---|
+| 0.50 | 0.00 / 0.00 / 0.00 / 0.00 | 0.01 / 0.00 / 0.00 / 0.00 | 0.00 / 0.00 / 0.00 / 0.00 |
+| 0.75 | 0.06 / 0.00 / 0.00 / 0.00 | **0.58** / 0.00 / 0.03 / 0.00 | **1.00** / 0.00 / 0.19 / 0.00 |
+| 1.00 | **0.75** / 0.00 / 0.00 / 0.00 | **1.00** / 0.00 / 0.50 / 0.00 | **1.00** / 0.00 / 1.00 / 0.00 |
+
+Most frequent top pair in honest runs at 600 rounds: info (M1, M2) 100/100, corr (M1, M2) 77/100, te (M1, M2) 39/100, ncd (F, L) 20/100 (the spread is near chance).
+
+**Findings**
+1. **Directed information is dominated by net influence** in this market. It reaches 1.00 only at full collusion with 600 rounds (net influence: 150 rounds), and 0.19 vs 1.00 at cp = 0.75. The front-running signal is mostly same-round (both sell in the dump), which TE ignores by design, and TE has no "strongest other influence" subtraction, so price-mediated flows (e.g. momentum traders reacting to past moves) compete with the colluders.
+2. **Compression finds nothing** (≤ 0.01 everywhere). With a 3-symbol alphabet and 30–600 symbols, zlib's overhead swamps the dependence. It also has no way to remove the public common cause. A state-free detector is not a free lunch.
+3. Both results support the main thesis: what makes a detector work here is **conditioning out the public common cause**, not the choice of information measure.
+
 ---
 
 # 4-player RPS with one seeded pair: net influence vs action correlation
