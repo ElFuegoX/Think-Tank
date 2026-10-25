@@ -218,6 +218,47 @@ Findings:
 
 ---
 
+# Sequential detection on 4-player RPS (tool 5)
+
+Code: `sequential.py`, a corrected version of the `seq_srp` branch. Command: `python sequential.py --calib 200 --runs 100`. Raw output: `results/sequential.txt`.
+
+## Setup
+- The same 4-player game as above, with a 1,000-round horizon. The detector looks every 100 rounds and sees only the rounds played so far.
+- Detectors: bias-corrected net influence (`info_perm`) and Cramér's V (`corr`).
+- **Calibration over the whole sequence.** At each look, a score's p-value is its rank among 200 honest calibration runs at the same look. The alarm fires at the first look where the p-value falls below c. c is chosen so that 5% of honest calibration runs *ever* alarm. False alarms are then checked on 100 fresh honest runs.
+- 100 runs per collusion cell, with 95% Wilson intervals.
+
+## Results
+
+False alarms on fresh honest games (share that ever alarm):
+
+| Variant | Detector | Calibrated rule | Naive rule (5% at every look) |
+|---|---|---|---|
+| independent | info_perm | 0.07 | **0.34** |
+| independent | corr | 0.06 | 0.14 |
+| herding | info_perm | 0.09 | **0.29** |
+| herding | corr | 0.00 | 0.19 |
+
+Correct pair identified at the alarm (by the end of the game / by round 300) and median alarm round:
+
+| Variant | cp | info_perm | corr |
+|---|---|---|---|
+| independent | 0.2 | 0.33 / 0.03, median round 800 | **0.98 / 0.89**, median round 200 |
+| independent | 0.4 | 0.99 / 0.56, median round 300 | **1.00 / 1.00**, median round 100 |
+| herding | 0.1 | **0.09** / 0.02 | 0.00 / 0.00 |
+| herding | 0.2 | **0.54** / 0.08, median round 700 | 0.00 / 0.00 |
+| herding | 0.4 | 1.00 / 0.70, median round 300 | 1.00 / 0.88, median round 200 |
+
+## Findings
+1. **Looking repeatedly at a fixed 5% threshold is invalid.** It raises false alarms in 14–34% of honest games, up to 7× the target. Calibrating on the whole sequence brings them back to about 5–9%. This was the main flaw of the first version on the `seq_srp` branch.
+2. **Early detection mirrors the fixed-length results.** Without a common cause, correlation alarms much earlier (median round 100–200) and more often. With herding, correlation never names the colluders at cp ≤ 0.2, while net influence does, but late (median round 700 at cp = 0.2).
+3. **Strong collusion is caught early by both** (median round 200–300 at cp = 0.4), with the right pair in ≥ 99% of alarms.
+4. **The price of correcting confounding is delay.** Net influence needs more rounds before it can alarm. In a market, this delay matters more than the final detection rate, because the pair profits before the alarm.
+
+**Limitation:** info_perm's false-alarm rate is slightly above target (7–9%), because the empirical p-values come from only 200 calibration runs. A larger calibration set would tighten it.
+
+---
+
 # LLM judge on RPS: with vs without information-theoretic statistics
 
 Code: `llm_judge.py`. Command: `python llm_judge.py --models poolside/laguna-s-2.1:free cohere/north-mini-code:free openai/gpt-4o-mini google/gemini-2.5-flash --seeds 10 --cps 0 0.2 0.4`. Raw outputs (scores, pairs, explanations, token usage, cost): `results/llm_judge_<model>_n300.jsonl`.
